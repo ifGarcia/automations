@@ -1,0 +1,39 @@
+name: Teste de status dos steps
+
+on:
+  workflow_dispatch:
+
+jobs:
+  status-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Step 1 - Simula sucesso
+        id: step_sucesso
+        run: |
+          echo "Executando step de sucesso"
+          exit 0
+
+      - name: Step 2 - Simula falha
+        id: step_falha
+        continue-on-error: true
+        run: |
+          echo "Executando step de falha"
+          exit 1
+
+      - name: Step 3 - Simula skipped
+        id: step_pulado
+        if: false
+        run: echo "Este step nao deve executar"
+
+      - name: Step final - Coleta status anteriores
+        if: always()
+        run: |
+          echo "step_sucesso.outcome=${{ steps.step_sucesso.outcome }}"
+          echo "step_sucesso.conclusion=${{ steps.step_sucesso.conclusion }}"
+
+          echo "step_falha.outcome=${{ steps.step_falha.outcome }}"
+          echo "step_falha.conclusion=${{ steps.step_falha.conclusion }}"
+
+          echo "step_pulado.outcome=${{ steps.step_pulado.outcome }}"
+          echo "step_pulado.conclusion=${{ steps.step_pulado.conclusion }}"
