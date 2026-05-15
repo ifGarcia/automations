@@ -1,27 +1,36 @@
-name: Criar README com Copilot
+name: Resumo do Repositório com Copilot (binário)
 
 on:
   workflow_dispatch:
+
 permissions:
-  contents: write   # dá permissão para commit/push
+  contents: write   # garante permissão para commit/push
+
 jobs:
-  create-readme:
+  summarize:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Gerar resumo com Copilot corporativo
+      - name: Baixar Copilot CLI (binário)
         run: |
-          curl -X POST "https://api.githubcopilot.com/v1/generate" \
-            -H "Authorization: Bearer ${{ secrets.TOKEN_IA }}" \
-            -d '{"prompt":"Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações."}' \
-            > SUMMARY.md
+          curl -L -o copilot-cli.tar.gz \
+            https://github.com/githubnext/copilot-cli/releases/download/v0.1.0/copilot-cli-linux-x64.tar.gz
+          tar -xzf copilot-cli.tar.gz
+          sudo mv copilot /usr/local/bin/copilot
+
+      - name: Gerar resumo do repositório
+        run: |
+          copilot suggest \
+            --prompt "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações." \
+            --output SUMMARY.md
 
       - name: Commit e push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add SUMMARY.md
-          git commit -m "Resumo do repositório gerado pelo Copilot corporativo"
+          git commit -m "Resumo do repositório gerado pelo Copilot (binário)"
           git push
