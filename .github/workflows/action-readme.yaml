@@ -7,38 +7,21 @@ permissions:
 jobs:
   create-readme:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      # Aqui você precisa autenticar com o Copilot corporativo
-      # usando um PAT ou GitHub App da sua organização
-      - name: Configurar autenticação
+      - name: Gerar resumo com Copilot corporativo
         run: |
-          echo "${{ secrets.TOKEN_IA }}" | gh auth login --with-token
-
-      - name: Instalar Copilot CLI
-        run: npm install -g @githubnext/copilot-cli
-
-      - name: Gerar resumo do repositório
-        run: |
-          copilot suggest \
-            --prompt "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações." \
-            --output SUMMARY.md
+          curl -X POST "https://api.githubcopilot.com/v1/generate" \
+            -H "Authorization: Bearer ${{ secrets.TOKEN_IA }}" \
+            -d '{"prompt":"Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações."}' \
+            > SUMMARY.md
 
       - name: Commit e push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add SUMMARY.md
-          git commit -m "Adicionando resumo do repositório gerado pelo Copilot corporativo"
+          git commit -m "Resumo do repositório gerado pelo Copilot corporativo"
           git push
