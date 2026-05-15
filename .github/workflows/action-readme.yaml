@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write   # garante permissão para commit/push
 
 jobs:
   summarize:
@@ -13,8 +13,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-        
-      - name: Baixar Copilot CLI
+
+      - name: Baixar Copilot CLI (binário v1.0.48)
         run: |
           curl -L -o copilot-cli.tar.gz \
             https://github.com/github/copilot-cli/releases/download/v1.0.48/copilot-linux-x64.tar.gz
@@ -32,6 +32,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add SUMMARY.md
-          git commit -m "Resumo do repositório gerado pelo Copilot"
+          git commit -m "Resumo do repositório gerado pelo Copilot (v1.0.48)"
           git push
-
