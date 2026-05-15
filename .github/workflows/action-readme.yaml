@@ -2,9 +2,6 @@ name: Criar README com Copilot
 
 on:
   workflow_dispatch:   # dispara manualmente
-  push:
-    branches:
-      - main
 
 jobs:
   create-readme:
