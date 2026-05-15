@@ -12,23 +12,33 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # - name: Instalar Copilot CLI
-      #   run: |
-      #     curl -L -o copilot-cli.tar.gz https://github.com/githubnext/copilot-cli/releases/latest/download/copilot-cli-linux-x64.tar.gz
-      #     tar -xzf copilot-cli.tar.gz
-      #     sudo mv copilot /usr/local/bin/copilot
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Gerar README com IA
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # Aqui você precisa autenticar com o Copilot corporativo
+      # usando um PAT ou GitHub App da sua organização
+      - name: Configurar autenticação
         run: |
-          curl -X POST "https://api.githubcopilot.com/v1/generate" \
-            -H "Authorization: Bearer ${{ secrets.TOKEN_IA }}" \
-            -d '{"prompt":"Crie um README.md para este repositório"}' \
-            > README.md
+          echo "${{ secrets.TOKEN_IA }}" | gh auth login --with-token
+
+      - name: Instalar Copilot CLI
+        run: npm install -g @githubnext/copilot-cli
+
+      - name: Gerar resumo do repositório
+        run: |
+          copilot suggest \
+            --prompt "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações." \
+            --output SUMMARY.md
 
       - name: Commit e push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "Adicionando README.md gerado pelo Copilot"
+          git add SUMMARY.md
+          git commit -m "Adicionando resumo do repositório gerado pelo Copilot corporativo"
           git push
