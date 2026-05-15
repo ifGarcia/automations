@@ -11,11 +11,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Instalar Copilot CLI
-        run: |
-          curl -L -o copilot-cli.tar.gz https://github.com/githubnext/copilot-cli/releases/latest/download/copilot-cli-linux-x64.tar.gz
-          tar -xzf copilot-cli.tar.gz
-          sudo mv copilot /usr/local/bin/copilot
+      # - name: Instalar Copilot CLI
+      #   run: |
+      #     curl -L -o copilot-cli.tar.gz https://github.com/githubnext/copilot-cli/releases/latest/download/copilot-cli-linux-x64.tar.gz
+      #     tar -xzf copilot-cli.tar.gz
+      #     sudo mv copilot /usr/local/bin/copilot
 
       - name: Gerar README com IA
         run: |
