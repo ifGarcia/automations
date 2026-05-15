@@ -137,7 +137,7 @@ jobs:
 
       - name: Push branch and create PR
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.TOKEN_COMMIT_WORKFLOW }}
           BRANCH: ${{ env.BRANCH }}
         run: |
           cd "$GITHUB_WORKSPACE"
