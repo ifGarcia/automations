@@ -46,20 +46,19 @@ jobs:
           sudo mv copilot /usr/local/bin/copilot
           copilot --version
 
-      - name: Authenticate GitHub CLI (non-interactive)
+      - name: Authenticate GitHub CLI (non-interactive, safe)
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Prefer GH_TOKEN (PAT) if provided; otherwise use GITHUB_TOKEN
           if [ -n "$GH_TOKEN" ]; then
             echo "Using GH_TOKEN from secrets"
-            echo "$GH_TOKEN" | gh auth login --with-token
+            echo "$GH_TOKEN" | env -u GITHUB_TOKEN gh auth login --with-token
           else
             echo "GH_TOKEN not set; falling back to GITHUB_TOKEN (repo-scoped)"
-            echo "$GITHUB_TOKEN" | gh auth login --with-token
+            echo "$GITHUB_TOKEN" | env -u GITHUB_TOKEN gh auth login --with-token
           fi
-          gh auth status
+          env -u GITHUB_TOKEN gh auth status || true
 
       - name: Create working branch
         id: branch
