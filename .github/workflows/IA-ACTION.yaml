@@ -74,22 +74,19 @@ jobs:
         run: |
         
           cat > /tmp/copilot_prompt.txt <<'PROMPT'
-          ATENÇÃO: NÃO execute edições diretas nem ferramentas interativas. NÃO peça permissão ao usuário. NÃO escreva fora de $GITHUB_WORKSPACE. NÃO modifique arquivos sob .github/workflows. Se identificar necessidade de mudança em qualquer workflow, NÃO altere esses arquivos; em vez disso, gere um arquivo acompanhante chamado `.github/workflows/<workflow-filename>.suggestions.md` contendo comentários técnicos e sugestões (em português) sobre as mudanças propostas. Saída exigida: APENAS um único unified git diff (diff -u) válido, começando com 'diff --git a/...' e pronto para 'git apply'. NÃO inclua explicações, cabeçalhos, metadados, ou qualquer texto fora do patch. Se não puder produzir um patch válido, responda com um patch vazio.
-          
           Você é um mantenedor experiente de repositórios. Analise todo o repositório (todos os arquivos de texto legíveis) e gere um único patch git unificado (diff -u) que adiciona **comentários técnicos** relevantes a cada documento, baseados no conteúdo e contexto do próprio arquivo. Siga estas regras estritas:
           
           1) Escopo
-          - Altere somente arquivos de texto sob o repositório (ex.: *.md, *.markdown, *.rst, *.yaml, *.yml, *.json, *.toml, *.ini, *.sh, Dockerfile, *.py, *.js, *.ts, *.go, *.java, *.rb, *.cfg, *.xml, *.gradle, *.properties, *.rst).
+          - Não altere os arquivos do repositorio diretamente.
           - **Não** modifique arquivos binários, dependências (node_modules, vendor), nem arquivos em .git.
-          - **Não** modifique arquivos em `.github/workflows/` (veja instrução acima).
           - Preserve a semântica e a validade dos arquivos (por exemplo, **não** insira comentários em JSON que quebrem o parse).
           
           2) Como adicionar comentários por tipo de arquivo
           - **Markdown (.md, .markdown, .rst):** adicione uma seção ao final chamada `<!-- Comentários técnicos -->` seguida de comentários em português dentro de **HTML comments** (`<!-- ... -->`) ou, se apropriado, uma seção visível `## Comentários técnicos` com observações curtas. Prefira HTML comments quando não quiser alterar a renderização.
           - **YAML / TOML / INI / shell / Dockerfile / scripts / código fonte:** insira comentários inline usando a sintaxe de comentário apropriada (`#` para YAML/TOML/shell, `//` ou `/* */` conforme a linguagem). Coloque comentários acima de blocos relevantes (funções, jobs, keys de workflow).
           - **JSON:** **não** insira comentários inline. Em vez disso, crie um arquivo acompanhante com o mesmo caminho e nome sufixado por `.comments.md` (ex.: `config.json.comments.md`) contendo comentários técnicos em português sobre `config.json`. Inclua esse novo arquivo no patch.
-          - **Arquivos de código (py, js, ts, go, java, rb, etc.):** adicione comentários curtos e técnicos próximos a funções, módulos ou blocos de configuração, usando a sintaxe de comentário da linguagem. Evite alterar lógica ou formatação além dos comentários.
-          - **Arquivos de workflow CI (.github/workflows/*.yml):** **NÃO** altere esses arquivos. Em vez disso, gere arquivos `.suggestions.md` conforme instruído no cabeçalho se houver recomendações.
+          - **Arquivos de código (py, js, ts, go, java, rb, etc.):** adicione comentários curtos e técnicos próximos a funções, módulos ou blocos de configuração, usando a sintaxe de comentário da linguagem. Não alterar lógica ou formatação.
+          - **Arquivos de workflow CI (.github/workflows/*.yml):** adicione comentarios simples e diretos sem alterar mais nada nos arquivos.
           
           3) Conteúdo dos comentários
           - Cada comentário deve ser conciso (1–4 linhas), em **português**, e cobrir quando aplicável:
