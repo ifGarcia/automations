@@ -11,12 +11,32 @@ jobs:
   copilot-agent:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository (full history)
+      - name: Checkout repository (full history, writable)
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           persist-credentials: true
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Debug runner environment (diagnose permissions)
+        run: |
+          echo "=== Runner user and env ==="
+          whoami && id
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          pwd
+          echo "Listing repo root:"
+          ls -la "$GITHUB_WORKSPACE" || true
+          echo "RUNNER_TEMP=$RUNNER_TEMP"
+          df -h .
+          echo "Try writing a test file in workspace..."
+          TESTFILE="$GITHUB_WORKSPACE/.write_test_$$.txt"
+          if touch "$TESTFILE" 2>/dev/null; then
+            echo "WRITE OK: $TESTFILE"
+            rm -f "$TESTFILE"
+          else
+            echo "ERROR: workspace is not writable. Aborting."
+            exit 1
+          fi
 
       - name: Download Copilot CLI v1.0.48
         run: |
@@ -26,12 +46,19 @@ jobs:
           sudo mv copilot /usr/local/bin/copilot
           copilot --version
 
-      # # Autentica o GitHub CLI (gh) pré-instalado no runner
-      # - name: Authenticate GitHub CLI
-      #   run: |
-      #     echo "${{ secrets.GH_TOKEN }}" | gh auth login --with-token
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Authenticate GitHub CLI (gh) with token
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "gh not found on runner; installing minimal gh..."
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt update && sudo apt install -y gh
+          fi
+          echo "$GH_TOKEN" | gh auth login --with-token
+          gh auth status
 
       - name: Create working branch
         id: branch
@@ -43,53 +70,19 @@ jobs:
       - name: Ask Copilot to generate a git patch (streaming)
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
-          # Customize the PROMPT below with precise repository-wide changes you want
-          PROMPT='Você é um mantenedor experiente de repositórios. Analise todo o repositório (todos os arquivos de texto legíveis) e gere um único patch git unificado (diff -u) que adiciona **comentários técnicos** relevantes a cada documento, baseados no conteúdo e contexto do próprio arquivo. Siga estas regras estritas:
-          1. Escopo
-          - Altere somente arquivos de texto sob o repositório (ex.: *.md, *.markdown, *.yaml, *.yml, *.json, *.toml, *.ini, *.sh, Dockerfile, *.py, *.js, *.ts, *.go, *.java, *.rb, *.cfg, *.xml, *.gradle, *.properties, *.rst).  
-          - **Não** modifique arquivos binários, dependências (node_modules, vendor), nem arquivos em .git.  
-          - Preserve a semântica e a validade dos arquivos (por exemplo, **não** insira comentários em JSON que quebrem o parse).
-          
-          2. Como adicionar comentários por tipo de arquivo
-          - **Markdown (.md, .markdown, .rst):** adicione uma seção ao final chamada `<!-- Comentários técnicos -->` seguida de comentários em português dentro de **HTML comments** (`<!-- ... -->`) ou, se apropriado, uma seção visível `## Comentários técnicos` com observações curtas. Prefira HTML comments quando não quiser alterar a renderização.
-          - **YAML / TOML / INI / shell / Dockerfile / scripts / código fonte:** insira comentários inline usando a sintaxe de comentário apropriada (`#` para YAML/TOML/shell, `//` ou `/* */` conforme a linguagem). Coloque comentários acima de blocos relevantes (funções, jobs, keys de workflow).
-          - **JSON:** **não** insira comentários inline. Em vez disso, crie um arquivo acompanhante com o mesmo caminho e nome sufixado por `.comments.md` (ex.: `config.json.comments.md`) contendo comentários técnicos em português sobre `config.json`.
-          - **Arquivos de código (py, js, ts, go, java, rb, etc.):** adicione comentários curtos e técnicos próximos a funções, módulos ou blocos de configuração, usando a sintaxe de comentário da linguagem. Evite alterar lógica ou formatação além dos comentários.
-          - **Arquivos de workflow CI (.github/workflows/*.yml):** comente cada job/step explicando propósito, entradas, outputs, riscos e sugestões de melhoria; use `#` para YAML.
-          
-          3. Conteúdo dos comentários
-          - Cada comentário deve ser conciso (1–4 linhas), em **português**, e cobrir quando aplicável:
-            - **O que** o trecho faz (resumo técnico).
-            - **Por que** está configurado assim (motivo/assunção).
-            - **Riscos/limitações** conhecidos (ex.: compatibilidade, segurança, performance).
-            - **Sugestões** práticas de melhoria (opcional, 1 linha).
-          - Evite opiniões vagas; baseie-se no conteúdo do arquivo (variáveis, comandos, dependências, versões, nomes de jobs, etc.).
-          
-          4. Segurança e formato do patch
-          - **Saída única:** produza **apenas** um unified git diff (patch) válido que pode ser aplicado com `git apply`.  
-          - **Não** inclua texto explicativo fora do patch.  
-          - Garanta que os caminhos e modos de arquivo no patch estejam corretos.  
-          - Se for necessário adicionar arquivos acompanhantes (ex.: `*.comments.md` para JSON), inclua-os no patch.  
-          - Se alguma alteração proposta for insegura ou ambígua (ex.: alterar código crítico), gere apenas um comentário explicativo no arquivo correspondente e **não** modifique a lógica.
-          
-          5. Granularidade e segurança operacional
-          - Mantenha mudanças mínimas e localizadas; prefira comentários curtos a grandes reescritas.  
-          - Não remova ou renomeie arquivos.  
-          - Se o repositório contiver arquivos de configuração sensíveis (ex.: chaves, tokens), **não** os exponha nem os modifique; apenas adicione comentários que alertem sobre sensibilidade.
-          
-          6. Formato final
-          - Saída: **apenas** unified diff (começando com linhas `diff --git a/... b/...`), pronto para `git apply`.  
-          - Não inclua instruções de commit, mensagens extras ou qualquer outro texto.
-          
-          Implemente as regras acima e gere o patch agora.'
+          cd "$GITHUB_WORKSPACE"
+          PROMPT='Você é um mantenedor experiente de repositórios. Analise todo o repositório (todos os arquivos de texto legíveis) e gere um único patch git unificado (diff -u) que adiciona **comentários técnicos** relevantes a cada documento, baseados no conteúdo e contexto do próprio arquivo. Siga as regras estritas: (respeitar tipos de arquivo, não quebrar JSON, usar arquivos .comments.md para JSON, não alterar lógica, saída apenas unified diff pronto para git apply). Gere o patch agora.'
           # Stream output to changes.patch and to logs
           copilot -p "$PROMPT" | tee changes.patch
 
       - name: Show generated patch head (for quick review)
         run: |
-          echo "=== changes.patch (first 200 lines) ==="
-          head -n 200 changes.patch || true
+          echo "=== changes.patch (first 400 lines) ==="
+          head -n 400 changes.patch || true
+          echo "=== changes.patch (last 40 lines) ==="
+          tail -n 40 changes.patch || true
 
       - name: Validate patch format
         run: |
@@ -103,47 +96,57 @@ jobs:
 
       - name: Dry-run apply (safety check)
         run: |
+          cd "$GITHUB_WORKSPACE"
           git apply --check changes.patch
 
       - name: Apply patch to working tree
         run: |
+          cd "$GITHUB_WORKSPACE"
           # Apply the patch to working tree
           git apply changes.patch
-          # Show which files changed
-          echo "Files changed by patch:"
+          echo "Files changed by patch (git status):"
           git status --porcelain | sed -n '1,200p'
 
       - name: Commit changes one file at a time
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
-          # For each changed file, create a separate commit
-          # Use git diff --name-only to list modified files
-          set -e
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          # Ensure git user configured
+          git config user.name "${GITHUB_ACTOR:-github-actions[bot]}"
+          git config user.email "${GITHUB_ACTOR:-github-actions[bot]}@users.noreply.github.com"
           FILES=$(git diff --name-only)
           if [ -z "$FILES" ]; then
             echo "No files changed by patch; nothing to commit"
             exit 0
           fi
+          # Create a commit per file
           for f in $FILES; do
-            # Ensure file exists (patch could delete files)
-            if [ -e "$f" ] || git ls-files --deleted --error-unmatch "$f" >/dev/null 2>&1; then
-              git add -- "$f" || true
-              # Use a clear commit message referencing Copilot
-              git commit -m "Apply Copilot-proposed changes to $f" || echo "No changes staged for $f"
-            else
-              echo "File $f not present after applying patch; skipping commit for this path"
+            # If file was deleted by patch, stage deletion
+            if [ ! -e "$f" ]; then
+              git add -A -- "$f" || true
+              git commit -m "Apply Copilot-proposed changes (delete) to $f" || echo "No changes staged for $f"
+              continue
             fi
+            git add -- "$f"
+            # Use a clear commit message referencing Copilot
+            git commit -m "Apply Copilot-proposed changes to $f" || echo "No changes staged for $f"
           done
           echo "Created commits for each changed file"
 
       - name: Push branch and create PR
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          BRANCH: ${{ env.BRANCH }}
         run: |
+          cd "$GITHUB_WORKSPACE"
           git push --set-upstream origin "$BRANCH"
           gh pr create --title "Repo-wide changes proposed by Copilot agent" \
             --body "Automated PR with repository-wide changes suggested by Copilot CLI. Please review each commit (one commit per file)." \
-            --base main
+            --base main || echo "gh pr create failed; check permissions or use GH_TOKEN with repo scope"
 
       - name: Output PR URL
         run: |
-          gh pr view --json url -q .url
+          # show PR url if created
+          gh pr view --json url -q .url || true
