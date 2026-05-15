@@ -73,20 +73,58 @@ jobs:
           GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
         
-          cd "$GITHUB_WORKSPACE"
-          PROMPT='ATENÇÃO: NÃO execute edições diretas nem ferramentas interativas. 
-          NÃO peça permissão ao usuário.
-          NÃO escreva fora de $GITHUB_WORKSPACE.
-          Saída exigida: APENAS um único unified git diff (diff -u) válido, começando com '\''diff --git a/...'\'' e pronto para '\''git apply'\''. 
-          NÃO inclua explicações, cabeçalhos, metadados, ou qualquer texto fora do patch.
-          Se não puder produzir um patch válido, responda com um patch vazio.
-          Você é um mantenedor experiente de repositórios.
-          Analise todo o repositório (todos os arquivos de texto legíveis) e gere um único patch git unificado (diff -u) que adiciona comentários técnicos relevantes a cada documento, baseados no conteúdo e contexto do próprio arquivo. 
-          Siga as regras estritas: respeitar tipos de arquivo, não quebrar JSON, não alterar lógica, saída apenas unified diff pronto para git apply. 
-          Gere o patch agora.'
+          cat > /tmp/copilot_prompt.txt <<'PROMPT'
+          ATENÇÃO: NÃO execute edições diretas nem ferramentas interativas. NÃO peça permissão ao usuário. NÃO escreva fora de $GITHUB_WORKSPACE. NÃO modifique arquivos sob .github/workflows. Se identificar necessidade de mudança em qualquer workflow, NÃO altere esses arquivos; em vez disso, gere um arquivo acompanhante chamado `.github/workflows/<workflow-filename>.suggestions.md` contendo comentários técnicos e sugestões (em português) sobre as mudanças propostas. Saída exigida: APENAS um único unified git diff (diff -u) válido, começando com 'diff --git a/...' e pronto para 'git apply'. NÃO inclua explicações, cabeçalhos, metadados, ou qualquer texto fora do patch. Se não puder produzir um patch válido, responda com um patch vazio.
           
-          # Stream output to changes.patch and to logs
-          copilot -p "$PROMPT" | tee changes.patch
+          Você é um mantenedor experiente de repositórios. Analise todo o repositório (todos os arquivos de texto legíveis) e gere um único patch git unificado (diff -u) que adiciona **comentários técnicos** relevantes a cada documento, baseados no conteúdo e contexto do próprio arquivo. Siga estas regras estritas:
+          
+          1) Escopo
+          - Altere somente arquivos de texto sob o repositório (ex.: *.md, *.markdown, *.rst, *.yaml, *.yml, *.json, *.toml, *.ini, *.sh, Dockerfile, *.py, *.js, *.ts, *.go, *.java, *.rb, *.cfg, *.xml, *.gradle, *.properties, *.rst).
+          - **Não** modifique arquivos binários, dependências (node_modules, vendor), nem arquivos em .git.
+          - **Não** modifique arquivos em `.github/workflows/` (veja instrução acima).
+          - Preserve a semântica e a validade dos arquivos (por exemplo, **não** insira comentários em JSON que quebrem o parse).
+          
+          2) Como adicionar comentários por tipo de arquivo
+          - **Markdown (.md, .markdown, .rst):** adicione uma seção ao final chamada `<!-- Comentários técnicos -->` seguida de comentários em português dentro de **HTML comments** (`<!-- ... -->`) ou, se apropriado, uma seção visível `## Comentários técnicos` com observações curtas. Prefira HTML comments quando não quiser alterar a renderização.
+          - **YAML / TOML / INI / shell / Dockerfile / scripts / código fonte:** insira comentários inline usando a sintaxe de comentário apropriada (`#` para YAML/TOML/shell, `//` ou `/* */` conforme a linguagem). Coloque comentários acima de blocos relevantes (funções, jobs, keys de workflow).
+          - **JSON:** **não** insira comentários inline. Em vez disso, crie um arquivo acompanhante com o mesmo caminho e nome sufixado por `.comments.md` (ex.: `config.json.comments.md`) contendo comentários técnicos em português sobre `config.json`. Inclua esse novo arquivo no patch.
+          - **Arquivos de código (py, js, ts, go, java, rb, etc.):** adicione comentários curtos e técnicos próximos a funções, módulos ou blocos de configuração, usando a sintaxe de comentário da linguagem. Evite alterar lógica ou formatação além dos comentários.
+          - **Arquivos de workflow CI (.github/workflows/*.yml):** **NÃO** altere esses arquivos. Em vez disso, gere arquivos `.suggestions.md` conforme instruído no cabeçalho se houver recomendações.
+          
+          3) Conteúdo dos comentários
+          - Cada comentário deve ser conciso (1–4 linhas), em **português**, e cobrir quando aplicável:
+            - **O que** o trecho faz (resumo técnico).
+            - **Por que** está configurado assim (motivo/assunção).
+            - **Riscos/limitações** conhecidos (ex.: compatibilidade, segurança, performance).
+            - **Sugestões** práticas de melhoria (opcional, 1 linha).
+          - Evite opiniões vagas; baseie-se no conteúdo do arquivo (variáveis, comandos, dependências, versões, nomes de jobs, etc.).
+          
+          4) Segurança e formato do patch
+          - **Saída única:** produza **apenas** um unified git diff (patch) válido que pode ser aplicado com `git apply`.
+          - **Não** inclua texto explicativo fora do patch.
+          - Garanta que os caminhos e modos de arquivo no patch estejam corretos.
+          - Se for necessário adicionar arquivos acompanhantes (ex.: `*.comments.md` para JSON ou `.suggestions.md` para workflows), inclua-os no patch.
+          - Se alguma alteração proposta for insegura ou ambígua (ex.: alterar código crítico), gere apenas um comentário explicativo no arquivo correspondente e **não** modifique a lógica.
+          
+          5) Granularidade e segurança operacional
+          - Mantenha mudanças mínimas e localizadas; prefira comentários curtos a grandes reescritas.
+          - Não remova ou renomeie arquivos.
+          - Se o repositório contiver arquivos de configuração sensíveis (ex.: chaves, tokens), **não** os exponha nem os modifique; apenas adicione comentários que alertem sobre sensibilidade.
+          
+          6) Regras operacionais adicionais para este agente
+          - NÃO tente criar arquivos fora de $GITHUB_WORKSPACE; grave `changes.patch` no diretório de trabalho.
+          - NÃO execute comandos, não aplique o patch; apenas gere o unified diff no stdout (capturado pelo runner).
+          - Se o patch incluir alterações que toquem exclusivamente arquivos em `.github/workflows/`, substitua essas alterações por arquivos `.github/workflows/<name>.suggestions.md` contendo comentários e sugestões, e inclua esses arquivos no patch em vez de modificar os workflows.
+          - Se o repositório contiver arquivos JSON grandes, prefira criar `*.comments.md` ao invés de inserir muitos comentários inline.
+          
+          Formato final:
+          - Saída: **apenas** unified diff (começando com linhas `diff --git a/... b/...`), pronto para `git apply`.
+          - Não inclua instruções de commit, mensagens extras ou qualquer outro texto.
+          
+          Implemente as regras acima e gere o patch agora.
+
+          PROMPT
+          copilot -p "$(cat /tmp/copilot_prompt.txt)" | tee changes.patch
 
       - name: Show generated patch head (for quick review)
         run: |
