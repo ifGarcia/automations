@@ -2,7 +2,8 @@ name: Criar README com Copilot
 
 on:
   workflow_dispatch:
-
+permissions:
+  contents: write   # dá permissão para commit/push
 jobs:
   create-readme:
     runs-on: ubuntu-latest
