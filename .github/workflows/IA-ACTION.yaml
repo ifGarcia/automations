@@ -77,6 +77,7 @@ jobs:
           Você é um mantenedor experiente de repositórios. Analise todo o repositório (todos os arquivos de texto legíveis) e gere um único patch git unificado (diff -u) que adiciona **comentários técnicos** relevantes a cada documento, baseados no conteúdo e contexto do próprio arquivo. Siga estas regras estritas:
           
           1) Escopo
+          - Não execute comando python ou node, use apenas shell puro.
           - Não altere os arquivos do repositorio diretamente.
           - **Não** modifique arquivos binários, dependências (node_modules, vendor), nem arquivos em .git.
           - Preserve a semântica e a validade dos arquivos (por exemplo, **não** insira comentários em JSON que quebrem o parse).
