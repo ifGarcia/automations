@@ -22,6 +22,8 @@ jobs:
           sudo mv copilot /usr/local/bin/copilot
 
       - name: Gerar resumo do repositório
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.TOKEN_IA }}
         run: |
           copilot -p "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações." > SUMMARY.md
 
