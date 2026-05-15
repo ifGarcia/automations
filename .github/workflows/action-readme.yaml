@@ -23,9 +23,7 @@ jobs:
 
       - name: Gerar resumo do repositório
         run: |
-          copilot suggest \
-            --prompt "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações." \
-            > SUMMARY.md
+          copilot -p "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações." > SUMMARY.md
 
       - name: Commit e push
         run: |
