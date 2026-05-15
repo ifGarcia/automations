@@ -12,7 +12,7 @@ def main():
 
     # Executa o Copilot CLI
     try:
-        result = subprocess.run(
+        result = subprocess.Popen(
             ["copilot", "-p", prompt],
             capture_output=True,
             text=True,
