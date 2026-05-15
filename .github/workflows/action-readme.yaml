@@ -23,7 +23,7 @@ jobs:
 
       - name: Gerar resumo do repositório
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.TOKEN_IA }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         run: |
           copilot -p "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações." > SUMMARY.md
 
