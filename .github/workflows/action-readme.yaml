@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # garante permissão para commit/push
+  contents: write
 
 jobs:
   summarize:
@@ -25,7 +25,7 @@ jobs:
         run: |
           copilot suggest \
             --prompt "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações." \
-            --output SUMMARY.md
+            > SUMMARY.md
 
       - name: Commit e push
         run: |
