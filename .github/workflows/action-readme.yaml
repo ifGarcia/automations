@@ -1,7 +1,7 @@
 name: Criar README com Copilot
 
 on:
-  workflow_dispatch:   # dispara manualmente
+  workflow_dispatch:
 
 jobs:
   create-readme:
@@ -11,13 +11,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
       - name: Instalar Copilot CLI
-        run: npm install -g @githubnext/copilot-cli
+        run: |
+          curl -L -o copilot-cli.tar.gz https://github.com/githubnext/copilot-cli/releases/latest/download/copilot-cli-linux-x64.tar.gz
+          tar -xzf copilot-cli.tar.gz
+          sudo mv copilot /usr/local/bin/copilot
 
       - name: Gerar README.md com Copilot
         run: |
