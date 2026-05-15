@@ -2,7 +2,7 @@ import os
 import subprocess
 
 def main():
-    prompt = "Analise este repositório e escreva um resumo em português explicando o objetivo e principais automações."
+    prompt = "Analise este repositório e adicione comnetrios em cada automação. A ideia é ser comentrios tecnicos explicativos."
     output_file = "SUMMARY.md"
 
     # Recupera o token do ambiente
