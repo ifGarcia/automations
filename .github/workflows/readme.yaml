@@ -1,0 +1,37 @@
+name: Criar README com Copilot
+
+on:
+  workflow_dispatch:   # dispara manualmente
+  push:
+    branches:
+      - main
+
+jobs:
+  create-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Instalar Copilot CLI
+        run: npm install -g @githubnext/copilot-cli
+
+      - name: Gerar README.md com Copilot
+        run: |
+          copilot suggest \
+            --prompt "Crie um README.md para este repositório com uma mensagem de boas-vindas e explicação simples." \
+            --output README.md
+
+      - name: Commit e push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Adicionando README.md gerado pelo Copilot"
+          git push
