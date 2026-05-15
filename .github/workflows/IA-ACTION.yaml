@@ -46,18 +46,19 @@ jobs:
           sudo mv copilot /usr/local/bin/copilot
           copilot --version
 
-      - name: Authenticate GitHub CLI (gh) with token
+      - name: Authenticate GitHub CLI (non-interactive)
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if ! command -v gh >/dev/null 2>&1; then
-            echo "gh not found on runner; installing minimal gh..."
-            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-            sudo apt update && sudo apt install -y gh
+          # Prefer GH_TOKEN (PAT) if provided; otherwise use GITHUB_TOKEN
+          if [ -n "$GH_TOKEN" ]; then
+            echo "Using GH_TOKEN from secrets"
+            echo "$GH_TOKEN" | gh auth login --with-token
+          else
+            echo "GH_TOKEN not set; falling back to GITHUB_TOKEN (repo-scoped)"
+            echo "$GITHUB_TOKEN" | gh auth login --with-token
           fi
-          echo "$GH_TOKEN" | gh auth login --with-token
           gh auth status
 
       - name: Create working branch
