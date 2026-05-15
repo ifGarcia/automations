@@ -17,11 +17,12 @@ jobs:
           tar -xzf copilot-cli.tar.gz
           sudo mv copilot /usr/local/bin/copilot
 
-      - name: Gerar README.md com Copilot
+      - name: Gerar README com IA
         run: |
-          copilot suggest \
-            --prompt "Crie um README.md para este repositório com uma mensagem de boas-vindas e explicação simples." \
-            --output README.md
+          curl -X POST "https://api.githubcopilot.com/v1/generate" \
+            -H "Authorization: Bearer ${{ secrets.TOKEN_IA }}" \
+            -d '{"prompt":"Crie um README.md para este repositório"}' \
+            > README.md
 
       - name: Commit e push
         run: |
