@@ -50,12 +50,6 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: 📦 Install Python dependencies
-        run: |
-          echo "📦 Instalando dependências Python..."
-          pip install requests
-          echo "✅ Requests instalado"
-      
       - name: 📦 Install GitHub Copilot CLI
         run: |
           echo "📦 Instalando Copilot CLI..."
@@ -203,161 +197,67 @@ jobs:
           echo ""
           echo "✅ Configurações preparadas para uso"
       
-      - name: 📂 Scan Repository Files
-        id: scan
-        run: |
-          echo "📂 Escaneando arquivos do repositório..."
-          
-          # Busca arquivos baseado no padrão
-          PATTERN="${{ github.event.inputs.target_files }}"
-          MAX_FILES="${{ github.event.inputs.max_files }}"
-          
-          # Busca arquivos
-          find . -type f -name "$PATTERN" \
-            -not -path "*/node_modules/*" \
-            -not -path "*/.git/*" \
-            -not -path "*/venv/*" \
-            -not -path "*/__pycache__/*" \
-            -not -path "*/dist/*" \
-            -not -path "*/build/*" \
-            | head -n "$MAX_FILES" \
-            > /tmp/target_files.txt
-          
-          FILE_COUNT=$(wc -l < /tmp/target_files.txt)
-          
-          echo "✅ Encontrados $FILE_COUNT arquivos para processar"
-          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
-          
-          echo ""
-          echo "📄 Arquivos que serão editados:"
-          cat /tmp/target_files.txt | sed 's/^/  - /'
-      
       # ========================================
-      # FASE 3: EDIÇÃO DE ARQUIVOS
+      # FASE 3: AGENTE AUTÔNOMO
       # ========================================
       
-      - name: 🤖 Run Copilot Agent - Edit Files
+      - name: 🤖 Run Copilot Agent (Autonomous Mode)
         env:
           GITHUB_TOKEN: ${{ secrets.COPILOT_BUSINESS_TOKEN }}
         run: |
           echo "═══════════════════════════════════════"
-          echo "🤖 INICIANDO EDIÇÃO COM COPILOT AGENT"
+          echo "🤖 COPILOT AGENT - MODO AUTÔNOMO"
           echo "═══════════════════════════════════════"
           echo ""
           echo "📝 Instrução: ${{ github.event.inputs.instruction }}"
           echo "🤖 Modelo: ${{ github.event.inputs.model }}"
-          echo "📊 Arquivos: ${{ steps.scan.outputs.file_count }}"
           echo ""
           
-          MODIFIED_COUNT=0
+          # Dá permissões de escrita ao agente
+          echo "🔓 Habilitando permissões de escrita..."
+          chmod -R u+w .
+          echo "✅ Permissões habilitadas"
+          echo ""
           
-          while IFS= read -r file; do
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "📝 Processando: $file"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            
-            # Lê o arquivo atual
-            FILE_LINES=$(wc -l < "$file")
-            
-            echo "  📄 Arquivo: $FILE_LINES linhas"
-            echo "  🔄 Chamando Copilot API via Python..."
-            
-            # Usa script Python helper para chamar API diretamente
-            # Evita problemas do copilot CLI que tenta executar ações
-            timeout 180s python3 scripts/copilot_edit_file.py "$file" "${{ github.event.inputs.instruction }}" > /tmp/new_content.txt 2>&1 &
-            PYTHON_PID=$!
-            
-            # Mostra progresso enquanto aguarda
-            ELAPSED=0
-            while kill -0 $PYTHON_PID 2>/dev/null; do
-              sleep 5
-              ELAPSED=$((ELAPSED + 5))
-              if [ $ELAPSED -le 180 ]; then
-                echo "  ⏳ Aguardando resposta... ${ELAPSED}s"
-              fi
-            done
-            
-            # Pega o exit code
-            wait $PYTHON_PID
+          # Deixa o agente agir autonomamente
+          echo "🚀 Iniciando agente Copilot..."
+          echo "⏱️  Timeout: 5 minutos"
+          echo ""
+          
+          timeout 300s copilot -p "${{ github.event.inputs.instruction }}" 2>&1 | tee /tmp/copilot_output.log || {
             EXIT_CODE=$?
-            
-            # Verifica timeout
-            if [ $EXIT_CODE -eq 124 ]; then
-              echo "  ⏱️  Timeout ao processar arquivo (>180s)"
-              echo "  💡 Dica: Arquivo pode ser muito grande ou instrução muito complexa"
-              continue
-            fi
-            
-            # Verifica se houve erro
-            if [ $EXIT_CODE -ne 0 ]; then
-              echo "  ⚠️  Erro ao chamar Copilot CLI (exit code: $EXIT_CODE)"
-              echo "  Primeiras linhas da saída:"
-              head -5 /tmp/new_content.txt | sed 's/^/    /'
-              continue
-            fi
-            
-            echo "  ✅ Resposta recebida do Copilot"
-            
-            # Verifica se gerou conteúdo
-            if [ ! -s /tmp/new_content.txt ]; then
-              echo "  ⚠️  Copilot não retornou conteúdo"
-              continue
-            fi
-            
-            # Verifica se retornou mensagens de erro do Copilot CLI
-            if grep -qi "error\|failed\|✗" /tmp/new_content.txt | head -1; then
-              echo "  ⚠️  Copilot retornou erro:"
-              grep -i "error\|failed\|✗" /tmp/new_content.txt | head -3 | sed 's/^/    /'
-              continue
-            fi
-            
-            # Remove linhas vazias no início e fim
-            sed -i '/^$/d' /tmp/new_content.txt
-            
-            # Remove marcadores de código se houver
-            sed -i 's/^```[a-z]*$//' /tmp/new_content.txt
-            sed -i '/^```$/d' /tmp/new_content.txt
-            
-            # Verifica se o conteúdo parece válido (tem pelo menos algumas linhas)
-            LINE_COUNT=$(wc -l < /tmp/new_content.txt)
-            if [ "$LINE_COUNT" -lt 3 ]; then
-              echo "  ⚠️  Conteúdo retornado muito curto ($LINE_COUNT linhas)"
-              continue
-            fi
-            
-            # Backup do arquivo original
-            cp "$file" "${file}.backup"
-            
-            # Substitui o arquivo
-            cp /tmp/new_content.txt "$file"
-            
-            # Verifica se houve mudanças
-            if git diff --quiet "$file"; then
-              echo "  ⏭️  Sem alterações necessárias"
-              # Restaura backup
-              mv "${file}.backup" "$file"
-            else
-              echo "  ✅ Arquivo modificado pelo agente"
-              echo "  📊 Diferenças:"
-              git diff --stat "$file" | sed 's/^/    /'
-              rm -f "${file}.backup"
-              MODIFIED_COUNT=$((MODIFIED_COUNT + 1))
-            fi
-            
             echo ""
-            
-            # Limpa temporários
-            rm -f /tmp/new_content.txt /tmp/copilot_prompt.txt
-            
-          done < /tmp/target_files.txt
+            if [ $EXIT_CODE -eq 124 ]; then
+              echo "⏱️  Timeout após 5 minutos"
+              echo "💡 O agente pode ter tentado muitas ações ou arquivos muito grandes"
+            else
+              echo "⚠️  Agente finalizou com código: $EXIT_CODE"
+              echo "📋 Últimas linhas do log:"
+              tail -20 /tmp/copilot_output.log | sed 's/^/  /'
+            fi
+          }
           
+          echo ""
           echo "═══════════════════════════════════════"
-          echo "✨ EDIÇÃO CONCLUÍDA"
+          echo "✨ AGENTE CONCLUÍDO"
           echo "═══════════════════════════════════════"
-          echo "📊 Arquivos modificados: $MODIFIED_COUNT"
           echo ""
           
-          echo "modified_count=$MODIFIED_COUNT" >> $GITHUB_OUTPUT
+          # Mostra o que foi modificado
+          echo "📊 Arquivos modificados pelo agente:"
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short | sed 's/^/  /'
+          else
+            echo "  (nenhum arquivo modificado)"
+          fi
+          echo ""
+          
+          echo "📈 Estatísticas das mudanças:"
+          if [ -n "$(git diff --stat)" ]; then
+            git diff --stat | sed 's/^/  /'
+          else
+            echo "  (sem mudanças)"
+          fi
       
       # ========================================
       # FASE 4: COMMIT E PR
@@ -392,18 +292,19 @@ jobs:
           git add -A
           
           # Commit detalhado
+          MODIFIED_FILES=$(git status --short | wc -l)
           cat > /tmp/commit_msg.txt <<EOF
-          🤖 Alterações do Copilot Agent (Business Plan)
+🤖 Alterações do Copilot Agent (Business Plan)
 
-          📝 Instrução: ${{ github.event.inputs.instruction }}
-          🤖 Modelo: ${{ github.event.inputs.model }}
-          📊 Arquivos processados: ${{ steps.scan.outputs.file_count }}
-          ✅ Arquivos modificados: $MODIFIED_COUNT
-          📅 Data: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+📝 Instrução: ${{ github.event.inputs.instruction }}
+🤖 Modelo: ${{ github.event.inputs.model }}
+✅ Arquivos modificados: $MODIFIED_FILES
+📅 Data: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          ---
-          Gerado automaticamente pelo GitHub Copilot CLI (Business Plan)
-          EOF
+---
+Gerado automaticamente pelo GitHub Copilot CLI (Business Plan)
+Modo: Agente Autônomo
+EOF
           
           git commit -F /tmp/commit_msg.txt
           
@@ -425,9 +326,9 @@ jobs:
           - **🏢 Plano**: GitHub Copilot Business
           - **🤖 Modelo**: \`${{ github.event.inputs.model }}\`
           - **📝 Instrução**: ${{ github.event.inputs.instruction }}
-          - **📊 Arquivos processados**: ${{ steps.scan.outputs.file_count }}
-          - **✅ Arquivos modificados**: $MODIFIED_COUNT
+          - **✅ Arquivos modificados**: $(git status --short 2>/dev/null | wc -l || echo 0)
           - **📅 Data**: $(date -u +'%d/%m/%Y %H:%M UTC')
+          - **⚙️  Modo**: Agente Autônomo
 
           ### Arquivos Alterados
 
@@ -458,9 +359,8 @@ jobs:
           
           ## 📊 Estatísticas
           
-          - **Arquivos escaneados**: ${{ steps.scan.outputs.file_count }}
-          - **Arquivos modificados**: $MODIFIED_COUNT
-          - **Padrão de arquivos**: \`${{ github.event.inputs.target_files }}\`
+          - **Arquivos modificados**: $(git status --short 2>/dev/null | wc -l || echo 0)
+          - **Modo**: Agente Autônomo (sem restrições)
           
           ## 📝 Instrução Executada
           
