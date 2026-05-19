@@ -1,5 +1,7 @@
 name: Teste de status dos steps
 
+# Acionado manualmente via interface do GitHub Actions (sem trigger automático).
+# Útil para validar o comportamento de expressões de status antes de usá-las em workflows reais.
 on:
   workflow_dispatch:
 
@@ -8,12 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Demonstra o estado "success": exit 0 é o comportamento padrão de sucesso no shell.
       - name: Step 1 - Simula sucesso
         id: step_sucesso
         run: |
           echo "Executando step de sucesso"
           exit 0
 
+      # continue-on-error: true impede que a falha deste step cancele os steps seguintes.
+      # Sem essa flag, exit 1 abortaria o job inteiro. Use com cautela: pode mascarar erros reais.
       - name: Step 2 - Simula falha
         id: step_falha
         continue-on-error: true
@@ -21,11 +26,16 @@ jobs:
           echo "Executando step de falha"
           exit 1
 
+      # if: false garante que o step nunca seja executado, simulando o estado "skipped".
+      # Útil para testar como outros steps reagem quando um passo anterior é pulado.
       - name: Step 3 - Simula skipped
         id: step_pulado
         if: false
         run: echo "Este step nao deve executar"
 
+      # if: always() garante execução mesmo que steps anteriores tenham falhado ou sido pulados.
+      # outcome: resultado imediato do step (success/failure/skipped/cancelled).
+      # conclusion: resultado final após aplicar continue-on-error (sempre "success" se continue-on-error: true).
       - name: Step final - Coleta status anteriores
         if: always()
         run: |
