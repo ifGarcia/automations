@@ -204,8 +204,6 @@ jobs:
       - name: 🤖 Run Copilot Agent (Autonomous Mode)
         env:
           GITHUB_TOKEN: ${{ secrets.COPILOT_BUSINESS_TOKEN }}
-          COPILOT_ALLOW_AUTO_APPROVE: "true"
-          COPILOT_NON_INTERACTIVE: "true"
         run: |
           echo "═══════════════════════════════════════"
           echo "🤖 COPILOT AGENT - MODO AUTÔNOMO"
@@ -228,13 +226,27 @@ jobs:
           echo "✅ Permissões habilitadas"
           echo ""
           
-          # Deixa o agente agir autonomamente (com auto-aprovação via 'yes')
-          echo "🚀 Iniciando agente Copilot..."
-          echo "⏱️  Timeout: 5 minutos"
-          echo "🤖 Modo: Auto-aprovação ativada"
+          # Configura aprovação automática do Copilot CLI (igual ao VS Code)
+          echo "🤖 Habilitando aprovação automática..."
+          mkdir -p ~/.config/github-copilot
+          cat > ~/.config/github-copilot/config.json << 'CONFIG_EOF'
+          {
+            "autoApprove": true,
+            "autoApproveEdits": true,
+            "confirmBeforeRunning": false,
+            "interactive": false
+          }
+          CONFIG_EOF
+          echo "✅ Aprovação automática habilitada"
           echo ""
           
-          yes | timeout 300s copilot -p "${{ github.event.inputs.instruction }}" 2>&1 | tee /tmp/copilot_output.log || {
+          # Executa o agente com aprovação automática
+          echo "🚀 Iniciando agente Copilot..."
+          echo "⏱️  Timeout: 5 minutos"
+          echo "🤖 Modo: Auto-aprovação nativa (via config)"
+          echo ""
+          
+          timeout 300s copilot -p "${{ github.event.inputs.instruction }}" 2>&1 | tee /tmp/copilot_output.log || {
             EXIT_CODE=$?
             echo ""
             if [ $EXIT_CODE -eq 124 ]; then
