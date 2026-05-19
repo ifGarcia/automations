@@ -29,6 +29,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  workflows: write
 
 jobs:
   copilot-agent:
@@ -57,6 +58,9 @@ jobs:
           tar -xzf copilot.tar.gz
           sudo mv copilot /usr/local/bin/
           chmod +x /usr/local/bin/copilot
+          
+          # Remove arquivo de instalação para não commitar
+          rm -f copilot.tar.gz
           
           echo "✅ Copilot CLI instalado"
           copilot --version
@@ -337,6 +341,11 @@ jobs:
             echo "BRANCH=$BRANCH" >> $GITHUB_ENV
             
             git checkout -b "$BRANCH"
+            
+            # Remove arquivos grandes e temporários antes de commitar
+            rm -f copilot.tar.gz
+            git rm --cached copilot.tar.gz 2>/dev/null || true
+            
             git add -A
             
             # Commit detalhado
