@@ -29,7 +29,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  workflows: write
 
 jobs:
   copilot-agent:
@@ -44,7 +43,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.COPILOT_BUSINESS_TOKEN }}  # PAT permite editar workflows
       
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
@@ -371,7 +370,7 @@ jobs:
       - name: 🚀 Push & Create PR
         if: env.BRANCH != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPILOT_BUSINESS_TOKEN }}  # PAT permite editar workflows
         run: |
           git push origin "${{ env.BRANCH }}"
           
