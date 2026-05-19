@@ -250,43 +250,21 @@ jobs:
             echo "📝 Processando: $file"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             
-            # Lê conteúdo atual
-            CURRENT_CONTENT=$(cat "$file")
-            
-            # Cria arquivo temporário com o prompt (usando cat sem heredoc indentado)
-            cat > /tmp/copilot_prompt.txt << 'PROMPT_END'
-            Você é um agente de edição de código. Sua tarefa é modificar o arquivo conforme a instrução.
-
-            ARQUIVO: TARGET_FILE_PATH
-
-            INSTRUÇÃO: TARGET_INSTRUCTION
-
-            CONTEÚDO ATUAL:
-            ```
-            TARGET_CONTENT
-            ```
-
-            REGRAS CRÍTICAS:
-            1. Retorne APENAS o código modificado completo do arquivo
-            2. NÃO inclua explicações antes ou depois do código
-            3. NÃO use blocos de código markdown (```)
-            4. NÃO adicione comentários sobre suas mudanças
-            5. Mantenha a formatação e estrutura original
-            6. Se não precisar de mudanças, retorne o arquivo original sem alterações
-
-            Retorne agora o arquivo completo modificado:
-            PROMPT_END
-            
-            # Substitui placeholders no prompt
-            sed -i "s|TARGET_FILE_PATH|$file|g" /tmp/copilot_prompt.txt
-            sed -i "s|TARGET_INSTRUCTION|${{ github.event.inputs.instruction }}|g" /tmp/copilot_prompt.txt
-            
-            # Substitui o conteúdo (escapando caracteres especiais)
-            # Cria arquivo temporário com o conteúdo
-            echo "$CURRENT_CONTENT" > /tmp/file_content.txt
-            # Usa sed para inserir o conteúdo no lugar do placeholder
-            sed -i '/TARGET_CONTENT/r /tmp/file_content.txt' /tmp/copilot_prompt.txt
-            sed -i '/TARGET_CONTENT/d' /tmp/copilot_prompt.txt
+            # Cria prompt usando printf (evita problemas com heredoc no YAML)
+            printf "Você é um agente de edição de código. Sua tarefa é modificar o arquivo conforme a instrução.\n\n" > /tmp/copilot_prompt.txt
+            printf "ARQUIVO: %s\n\n" "$file" >> /tmp/copilot_prompt.txt
+            printf "INSTRUÇÃO: %s\n\n" "${{ github.event.inputs.instruction }}" >> /tmp/copilot_prompt.txt
+            printf "CONTEÚDO ATUAL:\n\`\`\`\n" >> /tmp/copilot_prompt.txt
+            cat "$file" >> /tmp/copilot_prompt.txt
+            printf "\n\`\`\`\n\n" >> /tmp/copilot_prompt.txt
+            printf "REGRAS CRÍTICAS:\n" >> /tmp/copilot_prompt.txt
+            printf "1. Retorne APENAS o código modificado completo do arquivo\n" >> /tmp/copilot_prompt.txt
+            printf "2. NÃO inclua explicações antes ou depois do código\n" >> /tmp/copilot_prompt.txt
+            printf "3. NÃO use blocos de código markdown (\`\`\`)\n" >> /tmp/copilot_prompt.txt
+            printf "4. NÃO adicione comentários sobre suas mudanças\n" >> /tmp/copilot_prompt.txt
+            printf "5. Mantenha a formatação e estrutura original\n" >> /tmp/copilot_prompt.txt
+            printf "6. Se não precisar de mudanças, retorne o arquivo original sem alterações\n\n" >> /tmp/copilot_prompt.txt
+            printf "Retorne agora o arquivo completo modificado:\n" >> /tmp/copilot_prompt.txt
             
             # Chama Copilot CLI com timeout
             timeout 60s copilot -p "$(cat /tmp/copilot_prompt.txt)" > /tmp/new_content.txt 2>&1
