@@ -255,27 +255,27 @@ jobs:
             
             # Cria arquivo temporário com o prompt
             cat > /tmp/copilot_prompt.txt <<PROMPT_END
-Você é um agente de edição de código. Sua tarefa é modificar o arquivo conforme a instrução.
+            Você é um agente de edição de código. Sua tarefa é modificar o arquivo conforme a instrução.
 
-ARQUIVO: $file
+            ARQUIVO: $file
 
-INSTRUÇÃO: ${{ github.event.inputs.instruction }}
+            INSTRUÇÃO: ${{ github.event.inputs.instruction }}
 
-CONTEÚDO ATUAL:
-\`\`\`
-$CURRENT_CONTENT
-\`\`\`
+            CONTEÚDO ATUAL:
+            \`\`\`
+            $CURRENT_CONTENT
+            \`\`\`
 
-REGRAS CRÍTICAS:
-1. Retorne APENAS o código modificado completo do arquivo
-2. NÃO inclua explicações antes ou depois do código
-3. NÃO use blocos de código markdown (\`\`\`)
-4. NÃO adicione comentários sobre suas mudanças
-5. Mantenha a formatação e estrutura original
-6. Se não precisar de mudanças, retorne o arquivo original sem alterações
+            REGRAS CRÍTICAS:
+            1. Retorne APENAS o código modificado completo do arquivo
+            2. NÃO inclua explicações antes ou depois do código
+            3. NÃO use blocos de código markdown (\`\`\`)
+            4. NÃO adicione comentários sobre suas mudanças
+            5. Mantenha a formatação e estrutura original
+            6. Se não precisar de mudanças, retorne o arquivo original sem alterações
 
-Retorne agora o arquivo completo modificado:
-PROMPT_END
+            Retorne agora o arquivo completo modificado:
+            PROMPT_END
             
             # Chama Copilot CLI com timeout
             timeout 60s copilot -p "$(cat /tmp/copilot_prompt.txt)" > /tmp/new_content.txt 2>&1
