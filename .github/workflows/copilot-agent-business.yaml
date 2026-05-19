@@ -381,6 +381,15 @@ jobs:
             FILES_CHANGED=$(git diff --name-only HEAD~1 2>/dev/null || git diff --name-only --cached 2>/dev/null || echo "(não detectado)")
           fi
           
+          # Detecta tipo de commit (para evitar erro de sintaxe no gh pr create)
+          INITIAL_COMMIT="${{ github.sha }}"
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          if [ "$INITIAL_COMMIT" != "$CURRENT_COMMIT" ]; then
+            COMMIT_TYPE="Agente - automático"
+          else
+            COMMIT_TYPE="Workflow - manual"
+          fi
+          
           gh pr create \
             --title "🤖 Copilot Agent: ${{ github.event.inputs.instruction }}" \
             --body "## 🤖 Alterações Automáticas do Copilot Agent
@@ -393,7 +402,7 @@ jobs:
           - **✅ Arquivos modificados**: $(echo "$FILES_CHANGED" | wc -l)
           - **📅 Data**: $(date -u +'%d/%m/%Y %H:%M UTC')
           - **⚙️  Modo**: Agente Autônomo
-          - **🔄 Tipo de commit**: $([ \"$INITIAL_COMMIT\" != \"$CURRENT_COMMIT\" ] && echo \"Agente (auto)\" || echo \"Workflow (manual)\")
+          - **🔄 Tipo de commit**: $COMMIT_TYPE
 
           ### Arquivos Alterados
 
