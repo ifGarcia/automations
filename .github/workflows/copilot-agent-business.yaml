@@ -115,6 +115,37 @@ jobs:
           
           echo "✅ Copilot CLI pronto (usando GITHUB_TOKEN do ambiente)"
           echo "✅ Token tipo: Fine-Grained (compatível com Copilot)"
+          
+          # Testa autenticação com Copilot
+          echo ""
+          echo "🔍 Testando autenticação com Copilot..."
+          
+          # Faz um teste simples de prompt
+          TEST_RESULT=$(copilot -p "test" 2>&1 || true)
+          
+          if echo "$TEST_RESULT" | grep -q "Authentication failed"; then
+            echo ""
+            echo "❌ ERRO: Token não tem permissão 'Copilot Chat' ou 'Copilot Requests'"
+            echo ""
+            echo "🔧 Como adicionar a permissão faltante:"
+            echo ""
+            echo "1. Acesse: https://github.com/settings/tokens"
+            echo "2. Encontre seu token 'Copilot Business Token'"
+            echo "3. Clique no nome do token para editar"
+            echo "4. Role até 'Account permissions' (não 'Repository permissions')"
+            echo "5. Encontre e habilite:"
+            echo "   • ✅ Copilot Chat: Read and write (ou Read)"
+            echo "   OU"
+            echo "   • ✅ Copilot: Read"
+            echo "6. Clique em 'Update token' no final da página"
+            echo "7. Execute o workflow novamente"
+            echo ""
+            echo "⚠️  IMPORTANTE: Essa é uma permissão de CONTA (Account permissions),"
+            echo "   não de repositório (Repository permissions)!"
+            exit 1
+          fi
+          
+          echo "✅ Autenticação com Copilot OK"
       
       - name: ✅ Verify Business Plan & Features
         env:

@@ -38,14 +38,29 @@ Você DEVE usar um **Fine-Grained Token (github_pat_)**
      - Selecione **"All repositories"** OU
      - Selecione **"Only select repositories"** e escolha seu repositório
 
-4. **Permissions** (Repository permissions):
+4. **Permissions**:
+
+   **A) Repository permissions** (permissions de repositório):
    
-   Expanda as seções e configure:
+   Expanda "Repository permissions" e configure:
    
    - ✅ **Contents**: `Read and write` (para criar commits)
    - ✅ **Pull requests**: `Read and write` (para criar PRs)
    - ✅ **Metadata**: `Read-only` (obrigatório, selecionado automaticamente)
-   - ✅ **Copilot**: `Read` (se aparecer - disponível em contas Business/Enterprise)
+   
+   **B) Account permissions** (permissions de conta - OBRIGATÓRIO para Copilot):
+   
+   ⚠️ **CRÍTICO**: Role para baixo até encontrar **"Account permissions"**
+   
+   Expanda "Account permissions" e configure:
+   
+   - ✅ **Copilot Chat**: `Read and write` OU `Read` (OBRIGATÓRIO!)
+   
+   OU se não aparecer "Copilot Chat", procure por:
+   
+   - ✅ **Copilot**: `Read` (OBRIGATÓRIO!)
+   
+   **Nota**: Essas permissões de Copilot estão em **Account permissions** (no final da página), NÃO em Repository permissions!
 
 5. **Clique em**: **Generate token**
 
@@ -257,6 +272,37 @@ O workflow **garante** que está usando o plano Business através de:
 5. **Summary report**: Mostra explicitamente "Copilot Business"
 
 ## ⚠️ Troubleshooting
+
+### ❌ Erro: "Authentication failed" com Fine-Grained Token
+
+**Mensagem completa**:
+```
+Error: Authentication failed (Request ID: ...)
+If using a Fine-Grained PAT, ensure it has the 'Copilot Requests' permission enabled
+```
+
+**Causa**: Token Fine-Grained está correto, mas **falta a permissão de Copilot**
+
+**Solução**:
+
+1. **Acesse seus tokens**: https://github.com/settings/tokens
+
+2. **Encontre seu token** "Copilot Business Token" e clique nele
+
+3. **Role até o FINAL da página** para encontrar **"Account permissions"**
+   - ⚠️ NÃO confunda com "Repository permissions" (que fica no topo)
+   - "Account permissions" fica mais abaixo, quase no final
+
+4. **Expanda "Account permissions"** e procure por:
+   - **Copilot Chat**: Selecione `Read and write` ou `Read`
+   - OU
+   - **Copilot**: Selecione `Read`
+
+5. **Clique em "Update token"** no final da página
+
+6. **Execute o workflow novamente**
+
+**Dica**: Se você não vê as opções de Copilot em Account permissions, sua conta pode não ter acesso ao Copilot Business. Verifique com seu administrador.
 
 ### ❌ Erro: "Classic Personal Access Tokens (ghp_) are not supported by Copilot"
 
