@@ -12,21 +12,63 @@ Este workflow permite que o **GitHub Copilot Agent** (com plano Business e Claud
 2. Clique em **New repository secret**
 3. Configure:
    - **Name**: `COPILOT_BUSINESS_TOKEN`
-   - **Value**: Seu token do GitHub com acesso ao Copilot Business
+   - **Value**: Seu token Fine-Grained do GitHub com acesso ao Copilot Business
    
-#### Como gerar o token:
+#### ⚠️ IMPORTANTE: Use Fine-Grained Token (NÃO Classic)
 
-1. Acesse: https://github.com/settings/tokens
-2. Clique em **Generate new token** → **Generate new token (classic)**
-3. Configure:
-   - **Note**: `Copilot Business Token`
-   - **Expiration**: Escolha a duração
-   - **Scopes**: Marque:
-     - ✅ `repo` (Full control of private repositories)
-     - ✅ `copilot` (Access GitHub Copilot)
-4. Clique em **Generate token**
-5. **Copie o token** (você só verá uma vez!)
-6. Cole no Secret do repositório
+**O Copilot CLI NÃO aceita Classic Personal Access Tokens (ghp_)**
+
+Você DEVE usar um **Fine-Grained Token (github_pat_)**
+
+#### Como gerar o Fine-Grained Token correto:
+
+1. **Acesse**: https://github.com/settings/tokens?type=beta
+
+2. **Clique em**: **Generate new token** (na seção Fine-grained tokens)
+
+3. **Configure o token**:
+   
+   - **Token name**: `Copilot Business Token` (ou qualquer nome descritivo)
+   
+   - **Expiration**: Escolha a duração (30, 60, 90 dias, ou Custom)
+   
+   - **Description** (opcional): `Token para GitHub Copilot CLI Business`
+   
+   - **Repository access**: 
+     - Selecione **"All repositories"** OU
+     - Selecione **"Only select repositories"** e escolha seu repositório
+
+4. **Permissions** (Repository permissions):
+   
+   Expanda as seções e configure:
+   
+   - ✅ **Contents**: `Read and write` (para criar commits)
+   - ✅ **Pull requests**: `Read and write` (para criar PRs)
+   - ✅ **Metadata**: `Read-only` (obrigatório, selecionado automaticamente)
+   - ✅ **Copilot**: `Read` (se aparecer - disponível em contas Business/Enterprise)
+
+5. **Clique em**: **Generate token**
+
+6. **⚠️ COPIE O TOKEN AGORA** (você só verá uma vez!)
+   - O token começará com: `github_pat_`
+   - Exemplo: `github_pat_11AAAAAA...`
+
+7. **Cole no Secret do repositório**:
+   - Vá em seu repositório → Settings → Secrets → Actions
+   - New repository secret
+   - Name: `COPILOT_BUSINESS_TOKEN`
+   - Value: [cole o token copiado]
+
+#### ❌ Erro Comum: Token Clássico
+
+Se você vir este erro:
+```
+Error: Classic Personal Access Tokens (ghp_) are not supported by Copilot.
+```
+
+**Causa**: Você usou um token clássico (ghp_) em vez de Fine-Grained (github_pat_)
+
+**Solução**: Siga os passos acima para criar um Fine-Grained Token
 
 ### 2. Verifique Permissões do Workflow
 
@@ -216,6 +258,17 @@ O workflow **garante** que está usando o plano Business através de:
 
 ## ⚠️ Troubleshooting
 
+### ❌ Erro: "Classic Personal Access Tokens (ghp_) are not supported by Copilot"
+
+**Causa**: Você está usando um token clássico em vez de Fine-Grained
+
+**Solução**:
+1. Acesse: https://github.com/settings/tokens?type=beta
+2. Crie um **Fine-Grained Token** (não Classic)
+3. Configure as permissions conforme instruções acima
+4. Substitua o secret `COPILOT_BUSINESS_TOKEN` com o novo token
+5. O novo token deve começar com `github_pat_` (não `ghp_`)
+
 ### Erro: "COPILOT_BUSINESS_TOKEN não encontrado"
 
 **Solução**: Configure o secret conforme instruções acima
@@ -229,7 +282,11 @@ O workflow **garante** que está usando o plano Business através de:
 
 ### Erro: "Permission denied"
 
-**Solução**: Verifique as permissões do workflow (Settings → Actions → General)
+**Solução**: 
+1. Verifique as permissões do workflow (Settings → Actions → General)
+2. Certifique-se que o token tem as permissions corretas:
+   - Contents: Read and write
+   - Pull requests: Read and write
 
 ### Nenhum arquivo encontrado
 

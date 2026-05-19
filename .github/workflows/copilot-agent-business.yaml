@@ -86,10 +86,35 @@ jobs:
             exit 1
           fi
           
+          # Valida tipo de token (Copilot não aceita Classic PAT)
+          if [[ "$GITHUB_TOKEN" == ghp_* ]]; then
+            echo "❌ ERRO: Token Clássico (ghp_) não é suportado pelo Copilot CLI"
+            echo ""
+            echo "O Copilot CLI requer um Fine-Grained Personal Access Token (github_pat_)."
+            echo ""
+            echo "🔧 Como corrigir:"
+            echo "1. Acesse: https://github.com/settings/tokens?type=beta"
+            echo "2. Clique em 'Generate new token' (Fine-grained)"
+            echo "3. Configure:"
+            echo "   - Token name: Copilot Business Token"
+            echo "   - Expiration: Escolha a duração"
+            echo "   - Repository access: All repositories (ou específicos)"
+            echo "   - Permissions:"
+            echo "     • Contents: Read and write"
+            echo "     • Pull requests: Read and write"
+            echo "     • Copilot: Read (se disponível)"
+            echo "4. Gere o token e copie"
+            echo "5. Substitua o secret COPILOT_BUSINESS_TOKEN com o novo token"
+            echo ""
+            echo "Nota: O novo token começará com 'github_pat_' em vez de 'ghp_'"
+            exit 1
+          fi
+          
           # Testa acesso ao Copilot
           copilot --version
           
           echo "✅ Copilot CLI pronto (usando GITHUB_TOKEN do ambiente)"
+          echo "✅ Token tipo: Fine-Grained (compatível com Copilot)"
       
       - name: ✅ Verify Business Plan & Features
         env:
