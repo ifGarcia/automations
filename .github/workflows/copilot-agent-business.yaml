@@ -204,6 +204,8 @@ jobs:
       - name: 🤖 Run Copilot Agent (Autonomous Mode)
         env:
           GITHUB_TOKEN: ${{ secrets.COPILOT_BUSINESS_TOKEN }}
+          COPILOT_ALLOW_AUTO_APPROVE: "true"
+          COPILOT_NON_INTERACTIVE: "true"
         run: |
           echo "═══════════════════════════════════════"
           echo "🤖 COPILOT AGENT - MODO AUTÔNOMO"
@@ -213,18 +215,26 @@ jobs:
           echo "🤖 Modelo: ${{ github.event.inputs.model }}"
           echo ""
           
+          # Configura git para ambientes de CI/CD
+          echo "🔧 Configurando ambiente não-interativo..."
+          git config --global --add safe.directory '*'
+          git config --global user.name "GitHub Copilot Agent"
+          git config --global user.email "copilot-agent@github.com"
+          
           # Dá permissões de escrita ao agente
           echo "🔓 Habilitando permissões de escrita..."
           chmod -R u+w .
+          find . -type f -exec chmod u+w {} + 2>/dev/null || true
           echo "✅ Permissões habilitadas"
           echo ""
           
-          # Deixa o agente agir autonomamente
+          # Deixa o agente agir autonomamente (com auto-aprovação via 'yes')
           echo "🚀 Iniciando agente Copilot..."
           echo "⏱️  Timeout: 5 minutos"
+          echo "🤖 Modo: Auto-aprovação ativada"
           echo ""
           
-          timeout 300s copilot -p "${{ github.event.inputs.instruction }}" 2>&1 | tee /tmp/copilot_output.log || {
+          yes | timeout 300s copilot -p "${{ github.event.inputs.instruction }}" 2>&1 | tee /tmp/copilot_output.log || {
             EXIT_CODE=$?
             echo ""
             if [ $EXIT_CODE -eq 124 ]; then
