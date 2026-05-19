@@ -246,7 +246,7 @@ jobs:
           echo "🤖 Modo: Auto-aprovação nativa (via config)"
           echo ""
           
-          timeout 300s copilot -p "${{ github.event.inputs.instruction }}" 2>&1 | tee /tmp/copilot_output.log || {
+          timeout 300s copilot --allow-all-tools -p "${{ github.event.inputs.instruction }}" 2>&1 | tee /tmp/copilot_output.log || {
             EXIT_CODE=$?
             echo ""
             if [ $EXIT_CODE -eq 124 ]; then
