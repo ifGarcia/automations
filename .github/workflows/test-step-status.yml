@@ -1,5 +1,7 @@
 name: Teste de status dos steps
 
+# Workflow de demonstração/diagnóstico para validar o comportamento
+# das propriedades `outcome` e `conclusion` de cada step no GitHub Actions
 on:
   workflow_dispatch:
 
@@ -8,12 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # outcome: sucesso imediato (exit 0); conclusion reflete o mesmo valor
       - name: Step 1 - Simula sucesso
         id: step_sucesso
         run: |
           echo "Executando step de sucesso"
           exit 0
 
+      # continue-on-error: true impede que a falha deste step interrompa o job inteiro
+      # outcome será "failure", mas conclusion será "success" por causa do continue-on-error
       - name: Step 2 - Simula falha
         id: step_falha
         continue-on-error: true
@@ -21,11 +26,15 @@ jobs:
           echo "Executando step de falha"
           exit 1
 
+      # if: false faz o step ser pulado incondicionalmente
+      # outcome e conclusion serão "skipped"
       - name: Step 3 - Simula skipped
         id: step_pulado
         if: false
         run: echo "Este step nao deve executar"
 
+      # if: always() garante execução mesmo após falhas anteriores
+      # Útil para steps de relatório, limpeza ou notificação
       - name: Step final - Coleta status anteriores
         if: always()
         run: |

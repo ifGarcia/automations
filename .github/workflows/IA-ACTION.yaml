@@ -1,8 +1,11 @@
 name: Copilot Agent Repo-wide Changes (one commit per file)
 
+# Acionado manualmente via GitHub Actions UI (workflow_dispatch)
+# Ideal para execuções pontuais controladas por humanos
 on:
   workflow_dispatch:
 
+# Permissões mínimas necessárias: escrita no repositório e abertura de PRs
 permissions:
   contents: write
   pull-requests: write
@@ -11,6 +14,8 @@ jobs:
   copilot-agent:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 garante histórico completo para operações de diff e branch
+      # persist-credentials: true mantém o token para pushes posteriores
       - name: Checkout repository (full history, writable)
         uses: actions/checkout@v3
         with:
@@ -18,6 +23,8 @@ jobs:
           persist-credentials: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Step de diagnóstico: valida que o workspace é gravável antes de prosseguir
+      # Evita falhas silenciosas nos steps de patch/apply
       - name: Debug runner environment (diagnose permissions)
         run: |
           echo "=== Runner user and env ==="
@@ -38,6 +45,8 @@ jobs:
             exit 1
           fi
 
+      # Baixa versão fixa (v1.0.48) para garantir reprodutibilidade
+      # Usar "latest" pode introduzir quebras de compatibilidade em pipelines
       - name: Download Copilot CLI v1.0.48
         run: |
           curl -L -o copilot-cli.tar.gz \
@@ -46,6 +55,8 @@ jobs:
           sudo mv copilot /usr/local/bin/copilot
           copilot --version
 
+      # Prefere GH_TOKEN (PAT com escopos amplos) sobre GITHUB_TOKEN (escopo restrito ao repo)
+      # env -u GITHUB_TOKEN evita conflito entre as duas variáveis durante o login
       - name: Authenticate GitHub CLI (non-interactive, safe)
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -60,6 +71,8 @@ jobs:
           fi
           env -u GITHUB_TOKEN gh auth status || true
 
+      # Branch com timestamp no nome garante unicidade e rastreabilidade temporal
+      # O nome é exportado via GITHUB_ENV para reutilização nos steps seguintes
       - name: Create working branch
         id: branch
         run: |
@@ -122,8 +135,10 @@ jobs:
           Implemente as regras acima e gere o patch agora.
 
           PROMPT
+          # tee grava o patch em disco e exibe no log simultaneamente para rastreabilidade
           copilot -p "$(cat /tmp/copilot_prompt.txt)" | tee changes.patch
 
+      # Exibe as primeiras e últimas linhas do patch no log para revisão rápida sem abrir artefatos
       - name: Show generated patch head (for quick review)
         run: |
           echo "=== changes.patch (first 400 lines) ==="
@@ -131,6 +146,8 @@ jobs:
           echo "=== changes.patch (last 40 lines) ==="
           tail -n 40 changes.patch || true
 
+      # Validação básica: garante que o patch não está vazio e possui o cabeçalho correto
+      # Um patch inválido quebraria os steps de apply subsequentes
       - name: Validate patch format
         run: |
           if [ ! -s changes.patch ]; then
@@ -141,26 +158,29 @@ jobs:
           fi
           echo "Patch basic validation passed"
 
+      # --check simula a aplicação sem modificar arquivos; detecta conflitos antes de aplicar
       - name: Dry-run apply (safety check)
         run: |
           cd "$GITHUB_WORKSPACE"
           git apply --check changes.patch
 
+      # Aplica o patch efetivamente no working tree após a validação a seco
       - name: Apply patch to working tree
         run: |
           cd "$GITHUB_WORKSPACE"
-          # Apply the patch to working tree
           git apply changes.patch
           echo "Files changed by patch (git status):"
+          # Limita a 200 linhas para evitar logs excessivos em repos grandes
           git status --porcelain | sed -n '1,200p'
 
+      # Um commit por arquivo facilita revisão granular no PR e permite revert cirúrgico
       - name: Commit changes one file at a time
         env:
           GITHUB_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          # Ensure git user configured
+          # Usa o ator do workflow como autor; fallback para github-actions[bot]
           git config user.name "${GITHUB_ACTOR:-github-actions[bot]}"
           git config user.email "${GITHUB_ACTOR:-github-actions[bot]}@users.noreply.github.com"
           FILES=$(git diff --name-only)
@@ -168,20 +188,19 @@ jobs:
             echo "No files changed by patch; nothing to commit"
             exit 0
           fi
-          # Create a commit per file
           for f in $FILES; do
-            # If file was deleted by patch, stage deletion
+            # Trata exclusões de arquivo: staged via git add -A para registrar a deleção
             if [ ! -e "$f" ]; then
               git add -A -- "$f" || true
               git commit -m "Apply Copilot-proposed changes (delete) to $f" || echo "No changes staged for $f"
               continue
             fi
             git add -- "$f"
-            # Use a clear commit message referencing Copilot
             git commit -m "Apply Copilot-proposed changes to $f" || echo "No changes staged for $f"
           done
           echo "Created commits for each changed file"
 
+      # TOKEN_COMMIT_WORKFLOW deve ter escopo de repo:write e workflow para push em branches protegidas
       - name: Push branch and create PR
         env:
           GH_TOKEN: ${{ secrets.TOKEN_COMMIT_WORKFLOW }}
