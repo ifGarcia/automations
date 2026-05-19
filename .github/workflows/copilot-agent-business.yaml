@@ -174,170 +174,170 @@ jobs:
             # Cria prompt contextual para o arquivo
             PROMPT="Arquivo: $file
 
-Instrução: ${{ github.event.inputs.instruction }}
+# Instrução: ${{ github.event.inputs.instruction }}
 
-REGRAS IMPORTANTES:
-1. Retorne APENAS o conteúdo completo do arquivo modificado
-2. NÃO adicione explicações, comentários extras ou markdown
-3. NÃO use delimitadores de código (\`\`\`)
-4. Preserve a estrutura e formatação original
-5. Se não houver mudanças necessárias, retorne o arquivo original
+# REGRAS IMPORTANTES:
+# 1. Retorne APENAS o conteúdo completo do arquivo modificado
+# 2. NÃO adicione explicações, comentários extras ou markdown
+# 3. NÃO use delimitadores de código (\`\`\`)
+# 4. Preserve a estrutura e formatação original
+# 5. Se não houver mudanças necessárias, retorne o arquivo original
 
-Conteúdo atual do arquivo:
-$(cat "$file")
+# Conteúdo atual do arquivo:
+# $(cat "$file")
 
-Retorne o arquivo modificado agora:"
+# Retorne o arquivo modificado agora:"
             
-            # Chama o agente Copilot
-            gh copilot suggest "$PROMPT" --output /tmp/new_content.txt 2>/dev/null || \
-              copilot -p "$PROMPT" > /tmp/new_content.txt
+#             # Chama o agente Copilot
+#             gh copilot suggest "$PROMPT" --output /tmp/new_content.txt 2>/dev/null || \
+#               copilot -p "$PROMPT" > /tmp/new_content.txt
             
-            # Verifica se gerou conteúdo
-            if [ -s /tmp/new_content.txt ]; then
-              # Remove possíveis delimitadores de código
-              sed -i 's/^```.*$//' /tmp/new_content.txt
-              sed -i '/^$/d' /tmp/new_content.txt
+#             # Verifica se gerou conteúdo
+#             if [ -s /tmp/new_content.txt ]; then
+#               # Remove possíveis delimitadores de código
+#               sed -i 's/^```.*$//' /tmp/new_content.txt
+#               sed -i '/^$/d' /tmp/new_content.txt
               
-              # Substitui o arquivo original
-              cp /tmp/new_content.txt "$file"
+#               # Substitui o arquivo original
+#               cp /tmp/new_content.txt "$file"
               
-              # Verifica se houve mudanças
-              if git diff --quiet "$file"; then
-                echo "  ⏭️  Sem alterações necessárias"
-              else
-                echo "  ✅ Arquivo modificado pelo agente"
-                MODIFIED_COUNT=$((MODIFIED_COUNT + 1))
-              fi
-            else
-              echo "  ⚠️  Agente não retornou conteúdo"
-            fi
+#               # Verifica se houve mudanças
+#               if git diff --quiet "$file"; then
+#                 echo "  ⏭️  Sem alterações necessárias"
+#               else
+#                 echo "  ✅ Arquivo modificado pelo agente"
+#                 MODIFIED_COUNT=$((MODIFIED_COUNT + 1))
+#               fi
+#             else
+#               echo "  ⚠️  Agente não retornou conteúdo"
+#             fi
             
-            echo ""
+#             echo ""
             
-            rm -f /tmp/new_content.txt
+#             rm -f /tmp/new_content.txt
             
-          done < /tmp/target_files.txt
+#           done < /tmp/target_files.txt
           
-          echo "═══════════════════════════════════════"
-          echo "✨ EDIÇÃO CONCLUÍDA"
-          echo "═══════════════════════════════════════"
-          echo "📊 Arquivos modificados: $MODIFIED_COUNT"
-          echo ""
+#           echo "═══════════════════════════════════════"
+#           echo "✨ EDIÇÃO CONCLUÍDA"
+#           echo "═══════════════════════════════════════"
+#           echo "📊 Arquivos modificados: $MODIFIED_COUNT"
+#           echo ""
           
-          echo "modified_count=$MODIFIED_COUNT" >> $GITHUB_OUTPUT
+#           echo "modified_count=$MODIFIED_COUNT" >> $GITHUB_OUTPUT
       
-      # ========================================
-      # FASE 4: COMMIT E PR
-      # ========================================
+#       # ========================================
+#       # FASE 4: COMMIT E PR
+#       # ========================================
       
-      - name: 📊 Show Changes
-        run: |
-          echo "📋 Resumo das alterações:"
-          echo ""
-          git status --short
-          echo ""
-          echo "📝 Diff das alterações:"
-          git diff --stat
+#       - name: 📊 Show Changes
+#         run: |
+#           echo "📋 Resumo das alterações:"
+#           echo ""
+#           git status --short
+#           echo ""
+#           echo "📝 Diff das alterações:"
+#           git diff --stat
       
-      - name: 🔀 Create Branch & Commit
-        if: success()
-        run: |
-          # Verifica se há alterações
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "ℹ️ Nenhuma alteração foi feita"
-            exit 0
-          fi
+#       - name: 🔀 Create Branch & Commit
+#         if: success()
+#         run: |
+#           # Verifica se há alterações
+#           if [ -z "$(git status --porcelain)" ]; then
+#             echo "ℹ️ Nenhuma alteração foi feita"
+#             exit 0
+#           fi
           
-          # Cria branch
-          BRANCH="copilot-agent/edits-$(date +%s)"
-          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+#           # Cria branch
+#           BRANCH="copilot-agent/edits-$(date +%s)"
+#           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+#           git config user.name "github-actions[bot]"
+#           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          git checkout -b "$BRANCH"
-          git add -A
+#           git checkout -b "$BRANCH"
+#           git add -A
           
-          # Commit detalhado
-          cat > /tmp/commit_msg.txt <<EOF
-🤖 Alterações do Copilot Agent (Business Plan)
+#           # Commit detalhado
+#           cat > /tmp/commit_msg.txt <<EOF
+# 🤖 Alterações do Copilot Agent (Business Plan)
 
-📝 Instrução: ${{ github.event.inputs.instruction }}
-🤖 Modelo: ${{ github.event.inputs.model }}
-📊 Arquivos processados: ${{ steps.scan.outputs.file_count }}
-✅ Arquivos modificados: $MODIFIED_COUNT
-📅 Data: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+# 📝 Instrução: ${{ github.event.inputs.instruction }}
+# 🤖 Modelo: ${{ github.event.inputs.model }}
+# 📊 Arquivos processados: ${{ steps.scan.outputs.file_count }}
+# ✅ Arquivos modificados: $MODIFIED_COUNT
+# 📅 Data: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
----
-Gerado automaticamente pelo GitHub Copilot CLI (Business Plan)
-EOF
+# ---
+# Gerado automaticamente pelo GitHub Copilot CLI (Business Plan)
+# EOF
           
-          git commit -F /tmp/commit_msg.txt
+#           git commit -F /tmp/commit_msg.txt
           
-          echo "✅ Commit criado na branch: $BRANCH"
+#           echo "✅ Commit criado na branch: $BRANCH"
       
-      - name: 🚀 Push & Create PR
-        if: env.BRANCH != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git push origin "${{ env.BRANCH }}"
+#       - name: 🚀 Push & Create PR
+#         if: env.BRANCH != ''
+#         env:
+#           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           git push origin "${{ env.BRANCH }}"
           
-          gh pr create \
-            --title "🤖 Copilot Agent: ${{ github.event.inputs.instruction }}" \
-            --body "## 🤖 Alterações Automáticas do Copilot Agent
+#           gh pr create \
+#             --title "🤖 Copilot Agent: ${{ github.event.inputs.instruction }}" \
+#             --body "## 🤖 Alterações Automáticas do Copilot Agent
 
-### Detalhes da Execução
+# ### Detalhes da Execução
 
-- **🏢 Plano**: GitHub Copilot Business
-- **🤖 Modelo**: \`${{ github.event.inputs.model }}\`
-- **📝 Instrução**: ${{ github.event.inputs.instruction }}
-- **📊 Arquivos processados**: ${{ steps.scan.outputs.file_count }}
-- **✅ Arquivos modificados**: $MODIFIED_COUNT
-- **📅 Data**: $(date -u +'%d/%m/%Y %H:%M UTC')
+# - **🏢 Plano**: GitHub Copilot Business
+# - **🤖 Modelo**: \`${{ github.event.inputs.model }}\`
+# - **📝 Instrução**: ${{ github.event.inputs.instruction }}
+# - **📊 Arquivos processados**: ${{ steps.scan.outputs.file_count }}
+# - **✅ Arquivos modificados**: $MODIFIED_COUNT
+# - **📅 Data**: $(date -u +'%d/%m/%Y %H:%M UTC')
 
-### Arquivos Alterados
+# ### Arquivos Alterados
 
-\`\`\`
-$(git diff --name-only HEAD~1)
-\`\`\`
+# \`\`\`
+# $(git diff --name-only HEAD~1)
+# \`\`\`
 
-### Revisão
+# ### Revisão
 
-Por favor, revise as alterações antes de fazer merge. Todas as edições foram feitas pelo agente Copilot usando o modelo **${{ github.event.inputs.model }}**.
+# Por favor, revise as alterações antes de fazer merge. Todas as edições foram feitas pelo agente Copilot usando o modelo **${{ github.event.inputs.model }}**.
 
----
-*Gerado automaticamente via GitHub Copilot CLI (Business Plan)*
-" \
-            --base main || echo "⚠️ Erro ao criar PR"
+# ---
+# *Gerado automaticamente via GitHub Copilot CLI (Business Plan)*
+# " \
+#             --base main || echo "⚠️ Erro ao criar PR"
       
-      - name: 📊 Execution Summary
-        if: always()
-        run: |
-          cat >> $GITHUB_STEP_SUMMARY <<EOF
-          # 🤖 Copilot Agent Execution Report
+#       - name: 📊 Execution Summary
+#         if: always()
+#         run: |
+#           cat >> $GITHUB_STEP_SUMMARY <<EOF
+#           # 🤖 Copilot Agent Execution Report
           
-          ## ✅ Verificação do Plano
+#           ## ✅ Verificação do Plano
           
-          - **Plano**: GitHub Copilot **Business**
-          - **Modelo usado**: \`${{ github.event.inputs.model }}\`
-          - **Status**: Autenticado e verificado
+#           - **Plano**: GitHub Copilot **Business**
+#           - **Modelo usado**: \`${{ github.event.inputs.model }}\`
+#           - **Status**: Autenticado e verificado
           
-          ## 📊 Estatísticas
+#           ## 📊 Estatísticas
           
-          - **Arquivos escaneados**: ${{ steps.scan.outputs.file_count }}
-          - **Arquivos modificados**: $MODIFIED_COUNT
-          - **Padrão de arquivos**: \`${{ github.event.inputs.target_files }}\`
+#           - **Arquivos escaneados**: ${{ steps.scan.outputs.file_count }}
+#           - **Arquivos modificados**: $MODIFIED_COUNT
+#           - **Padrão de arquivos**: \`${{ github.event.inputs.target_files }}\`
           
-          ## 📝 Instrução Executada
+#           ## 📝 Instrução Executada
           
-          > ${{ github.event.inputs.instruction }}
+#           > ${{ github.event.inputs.instruction }}
           
-          ## 🔗 Links
+#           ## 🔗 Links
           
-          - **Branch**: \`${{ env.BRANCH }}\`
-          - **Pull Request**: Criado automaticamente
+#           - **Branch**: \`${{ env.BRANCH }}\`
+#           - **Pull Request**: Criado automaticamente
           
-          ---
-          *Powered by GitHub Copilot Business*
-          EOF
+#           ---
+#           *Powered by GitHub Copilot Business*
+#           EOF
