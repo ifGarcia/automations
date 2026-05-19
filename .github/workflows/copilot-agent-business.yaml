@@ -294,17 +294,17 @@ jobs:
           # Commit detalhado
           MODIFIED_FILES=$(git status --short | wc -l)
           cat > /tmp/commit_msg.txt <<EOF
-🤖 Alterações do Copilot Agent (Business Plan)
+          🤖 Alterações do Copilot Agent (Business Plan)
 
-📝 Instrução: ${{ github.event.inputs.instruction }}
-🤖 Modelo: ${{ github.event.inputs.model }}
-✅ Arquivos modificados: $MODIFIED_FILES
-📅 Data: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          📝 Instrução: ${{ github.event.inputs.instruction }}
+          🤖 Modelo: ${{ github.event.inputs.model }}
+          ✅ Arquivos modificados: $MODIFIED_FILES
+          📅 Data: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
----
-Gerado automaticamente pelo GitHub Copilot CLI (Business Plan)
-Modo: Agente Autônomo
-EOF
+          ---
+          Gerado automaticamente pelo GitHub Copilot CLI (Business Plan)
+          Modo: Agente Autônomo
+          EOF
           
           git commit -F /tmp/commit_msg.txt
           
