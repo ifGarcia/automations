@@ -46,6 +46,7 @@ Você DEVE usar um **Fine-Grained Token (github_pat_)**
    
    - ✅ **Contents**: `Read and write` (para criar commits)
    - ✅ **Pull requests**: `Read and write` (para criar PRs)
+   - ✅ **Workflows**: `Read and write` (para editar arquivos em .github/workflows/)
    - ✅ **Metadata**: `Read-only` (obrigatório, selecionado automaticamente)
    
    **B) Account permissions** (permissions de conta - OBRIGATÓRIO para Copilot):
@@ -303,6 +304,36 @@ If using a Fine-Grained PAT, ensure it has the 'Copilot Requests' permission ena
 6. **Execute o workflow novamente**
 
 **Dica**: Se você não vê as opções de Copilot em Account permissions, sua conta pode não ter acesso ao Copilot Business. Verifique com seu administrador.
+
+### ❌ Erro: "refusing to allow a Personal Access Token to create or update workflow without `workflow` scope"
+
+**Mensagem completa**:
+```
+! [remote rejected] copilot-agent/edits-xxx -> copilot-agent/edits-xxx 
+(refusing to allow a Personal Access Token to create or update workflow 
+`.github/workflows/IA-ACTION.yaml` without `workflow` scope)
+```
+
+**Causa**: O agente tentou editar arquivos em `.github/workflows/` mas o token não tem permissão `Workflows`
+
+**Solução**:
+
+1. **Acesse seus tokens**: https://github.com/settings/tokens
+
+2. **Encontre seu token** "Copilot Business Token" e clique para editar
+
+3. **Role até "Repository permissions"**
+
+4. **Encontre "Workflows"** e configure:
+   - ✅ **Workflows**: `Read and write`
+
+5. **Clique em "Update token"** no final da página
+
+6. **Execute o workflow novamente**
+
+**Alternativa**: Se você NÃO quer que o agente edite workflows:
+- Modifique a instrução para excluir arquivos `.github/workflows/`
+- Exemplo: "Adicione comentários em todos os arquivos Python, mas não edite workflows"
 
 ### ❌ Erro: "Classic Personal Access Tokens (ghp_) are not supported by Copilot"
 
