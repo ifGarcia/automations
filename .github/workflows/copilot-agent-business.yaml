@@ -250,60 +250,101 @@ jobs:
             echo "📝 Processando: $file"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             
-            # Cria prompt contextual para o arquivo
-            PROMPT="Arquivo: $file
+            # Lê conteúdo atual
+            CURRENT_CONTENT=$(cat "$file")
+            
+            # Cria arquivo temporário com o prompt
+            cat > /tmp/copilot_prompt.txt <<PROMPT_END
+Você é um agente de edição de código. Sua tarefa é modificar o arquivo conforme a instrução.
 
-          Instrução: ${{ github.event.inputs.instruction }}
+ARQUIVO: $file
 
-          REGRAS IMPORTANTES:
-          1. Retorne APENAS o conteúdo completo do arquivo modificado
-          2. NÃO adicione explicações, comentários extras ou markdown
-          3. NÃO use delimitadores de código (\`\`\`)
-          4. Preserve a estrutura e formatação original
-          5. Se não houver mudanças necessárias, retorne o arquivo original
+INSTRUÇÃO: ${{ github.event.inputs.instruction }}
 
-          Conteúdo atual do arquivo:
-          $(cat "$file")
+CONTEÚDO ATUAL:
+\`\`\`
+$CURRENT_CONTENT
+\`\`\`
 
-          Retorne o arquivo modificado agora:"
-                      
-            # Chama o agente Copilot (usa GITHUB_TOKEN do ambiente)
-            # Copilot CLI automaticamente usa GITHUB_TOKEN quando disponível
-            copilot -p "$PROMPT" > /tmp/new_content.txt 2>&1 || {
-              echo "  ⚠️  Erro ao chamar Copilot CLI"
-              cat /tmp/new_content.txt
+REGRAS CRÍTICAS:
+1. Retorne APENAS o código modificado completo do arquivo
+2. NÃO inclua explicações antes ou depois do código
+3. NÃO use blocos de código markdown (\`\`\`)
+4. NÃO adicione comentários sobre suas mudanças
+5. Mantenha a formatação e estrutura original
+6. Se não precisar de mudanças, retorne o arquivo original sem alterações
+
+Retorne agora o arquivo completo modificado:
+PROMPT_END
+            
+            # Chama Copilot CLI com timeout
+            timeout 60s copilot -p "$(cat /tmp/copilot_prompt.txt)" > /tmp/new_content.txt 2>&1
+            EXIT_CODE=$?
+            
+            # Verifica timeout
+            if [ $EXIT_CODE -eq 124 ]; then
+              echo "  ⏱️  Timeout ao processar arquivo (>60s)"
               continue
-            }
+            fi
+            
+            # Verifica se houve erro
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "  ⚠️  Erro ao chamar Copilot CLI (exit code: $EXIT_CODE)"
+              echo "  Primeiras linhas da saída:"
+              head -5 /tmp/new_content.txt | sed 's/^/    /'
+              continue
+            fi
             
             # Verifica se gerou conteúdo
-            if [ -s /tmp/new_content.txt ]; then
-              # Remove possíveis delimitadores de código
-              sed -i 's/^```.*$//' /tmp/new_content.txt
-              sed -i '/^$/d' /tmp/new_content.txt
-              
-              # Verifica se o conteúdo não é erro
-              if grep -q "error\|Error\|ERROR" /tmp/new_content.txt; then
-                echo "  ⚠️  Copilot retornou erro:"
-                head -5 /tmp/new_content.txt
-              else
-                # Substitui o arquivo original
-                cp /tmp/new_content.txt "$file"
-                
-                # Verifica se houve mudanças
-                if git diff --quiet "$file"; then
-                  echo "  ⏭️  Sem alterações necessárias"
-                else
-                  echo "  ✅ Arquivo modificado pelo agente"
-                  MODIFIED_COUNT=$((MODIFIED_COUNT + 1))
-                fi
-              fi
+            if [ ! -s /tmp/new_content.txt ]; then
+              echo "  ⚠️  Copilot não retornou conteúdo"
+              continue
+            fi
+            
+            # Verifica se retornou mensagens de erro do Copilot CLI
+            if grep -qi "error\|failed\|✗" /tmp/new_content.txt | head -1; then
+              echo "  ⚠️  Copilot retornou erro:"
+              grep -i "error\|failed\|✗" /tmp/new_content.txt | head -3 | sed 's/^/    /'
+              continue
+            fi
+            
+            # Remove linhas vazias no início e fim
+            sed -i '/^$/d' /tmp/new_content.txt
+            
+            # Remove marcadores de código se houver
+            sed -i 's/^```[a-z]*$//' /tmp/new_content.txt
+            sed -i '/^```$/d' /tmp/new_content.txt
+            
+            # Verifica se o conteúdo parece válido (tem pelo menos algumas linhas)
+            LINE_COUNT=$(wc -l < /tmp/new_content.txt)
+            if [ "$LINE_COUNT" -lt 3 ]; then
+              echo "  ⚠️  Conteúdo retornado muito curto ($LINE_COUNT linhas)"
+              continue
+            fi
+            
+            # Backup do arquivo original
+            cp "$file" "${file}.backup"
+            
+            # Substitui o arquivo
+            cp /tmp/new_content.txt "$file"
+            
+            # Verifica se houve mudanças
+            if git diff --quiet "$file"; then
+              echo "  ⏭️  Sem alterações necessárias"
+              # Restaura backup
+              mv "${file}.backup" "$file"
             else
-              echo "  ⚠️  Agente não retornou conteúdo"
+              echo "  ✅ Arquivo modificado pelo agente"
+              echo "  📊 Diferenças:"
+              git diff --stat "$file" | sed 's/^/    /'
+              rm -f "${file}.backup"
+              MODIFIED_COUNT=$((MODIFIED_COUNT + 1))
             fi
             
             echo ""
             
-            rm -f /tmp/new_content.txt
+            # Limpa temporários
+            rm -f /tmp/new_content.txt /tmp/copilot_prompt.txt
             
           done < /tmp/target_files.txt
           
