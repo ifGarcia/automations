@@ -313,14 +313,11 @@ jobs:
             echo "📝 Commit: $(git log -1 --oneline)"
             echo ""
             
-            # Cria branch a partir do commit atual
+            # Cria branch a partir do commit atual (que já contém as mudanças)
             BRANCH="copilot-agent/edits-$(date +%s)"
             echo "BRANCH=$BRANCH" >> $GITHUB_ENV
             
-            # Move o commit para uma nova branch
-            git branch "$BRANCH"
-            git reset --hard "$INITIAL_COMMIT"
-            git checkout "$BRANCH"
+            git checkout -b "$BRANCH"
             
             echo "✅ Branch criada: $BRANCH"
             echo "📊 Arquivos modificados: $(git diff --name-only HEAD~1 | wc -l)"
