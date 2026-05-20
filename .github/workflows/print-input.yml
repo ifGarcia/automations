@@ -1,0 +1,16 @@
+name: Print User Input
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Mensagem a ser impressa'
+        required: true
+        type: string
+
+jobs:
+  print:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Imprimir mensagem do usuário
+        run: echo "Mensagem: ${{ github.event.inputs.message }}"
